@@ -31,6 +31,12 @@ const Sidebar = () => {
       path: '/fund-accounts'
     },
     {
+      id: 'override',
+      label: 'Override',
+      icon: '',
+      path: '/override'
+    },
+    {
       id: 'reporting',
       label: 'Reporting',
       icon: '',

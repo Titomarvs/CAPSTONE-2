@@ -26,6 +26,8 @@ const TransactionManagement = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
 
   // Fetch transactions and fund accounts on component mount
   useEffect(() => {
@@ -100,6 +102,25 @@ const TransactionManagement = () => {
       setMessage(`${transactionType} transaction created successfully!`);
       setMessageType('success');
       
+      // Show receipt for collection transactions
+      if (transactionType === 'Collection') {
+        const receiptInfo = {
+          transactionId: response.data.transaction.id,
+          type: transactionType,
+          amount: formData.amount,
+          description: formData.description,
+          recipient: formData.recipient,
+          department: formData.department,
+          category: formData.category,
+          reference: formData.reference,
+          modeOfPayment: formData.mode_of_payment,
+          date: new Date().toLocaleString(),
+          createdBy: user?.name || 'System User'
+        };
+        setReceiptData(receiptInfo);
+        setShowReceipt(true);
+      }
+      
       // Reset form
       setFormData({
         amount: '',
@@ -138,6 +159,198 @@ const TransactionManagement = () => {
     setSelectedTransaction(null);
   };
 
+  const handleCloseReceipt = () => {
+    setShowReceipt(false);
+    setReceiptData(null);
+  };
+
+  const handlePrintReceipt = () => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    const receiptContent = document.getElementById('receipt-content');
+    
+    if (receiptContent && printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Collection Receipt</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 12px;
+              line-height: 1.4;
+              color: black;
+              background: white;
+              padding: 20px;
+            }
+            .receipt-header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 15px;
+            }
+            .receipt-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .receipt-subtitle {
+              font-size: 18px;
+              margin-bottom: 5px;
+              color: #333;
+            }
+            .receipt-date {
+              font-size: 12px;
+              color: #666;
+            }
+            .receipt-content {
+              display: flex;
+              gap: 40px;
+              margin-bottom: 30px;
+            }
+            .receipt-column {
+              flex: 1;
+            }
+            .section {
+              margin-bottom: 20px;
+            }
+            .section-title {
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #333;
+              border-bottom: 1px solid #ccc;
+              padding-bottom: 5px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+            }
+            .info-label {
+              font-weight: 500;
+            }
+            .info-value {
+              font-weight: bold;
+            }
+            .info-block {
+              margin-bottom: 8px;
+            }
+            .info-block-label {
+              font-weight: bold;
+            }
+            .info-block-value {
+              margin-left: 10px;
+              margin-top: 2px;
+            }
+            .highlight-box {
+              background-color: #f8f9fa;
+              padding: 15px;
+              border-radius: 5px;
+              border: 1px solid #e9ecef;
+            }
+            .description-section {
+              margin-bottom: 20px;
+            }
+            .description-content {
+              background-color: #f8f9fa;
+              padding: 15px;
+              border-radius: 5px;
+              border: 1px solid #e9ecef;
+              font-size: 14px;
+              line-height: 1.4;
+            }
+            .receipt-footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 2px solid #000;
+              background-color: #f8f9fa;
+              padding: 20px;
+              border-radius: 5px;
+            }
+            .footer-title {
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #16a34a;
+            }
+            .footer-subtitle {
+              font-size: 12px;
+              color: #666;
+            }
+            .footer-note {
+              font-size: 10px;
+              color: #999;
+              margin-top: 10px;
+            }
+            @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                overflow: hidden !important;
+              }
+              #receipt-content {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 794px !important;
+                height: 192px !important;
+                margin: 0 !important;
+                padding: 4px !important;
+                overflow: hidden !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+                font-size: 7px !important;
+                line-height: 1.0 !important;
+                box-sizing: border-box !important;
+              }
+              #receipt-content * {
+                max-width: 100% !important;
+                word-wrap: break-word !important;
+                overflow: hidden !important;
+              }
+              @page {
+                size: A4 portrait;
+                margin: 0.5in;
+                padding: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${receiptContent.innerHTML}
+        </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Wait for content to load then print
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    } else {
+      // Fallback to regular print
+      window.print();
+    }
+  };
+
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
@@ -157,6 +370,80 @@ const TransactionManagement = () => {
 
   return (
     <Layout>
+      <style jsx>{`
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          
+          .receipt-overlay {
+            position: static !important;
+            background: none !important;
+            display: block !important;
+            visibility: visible !important;
+          }
+          
+          .receipt-popup {
+            position: static !important;
+            display: block !important;
+            visibility: visible !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
+            background: white !important;
+          }
+          
+          .receipt-header,
+          .receipt-actions {
+            display: none !important;
+          }
+          
+          #receipt-content {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            display: block !important;
+            visibility: visible !important;
+            width: 794px !important;
+            height: 192px !important;
+            margin: 0 !important;
+            padding: 4px !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            font-size: 7px !important;
+            line-height: 1.0 !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            page-break-before: avoid !important;
+            color: black !important;
+          }
+          
+          #receipt-content * {
+            visibility: visible !important;
+            color: black !important;
+            background: transparent !important;
+          }
+          
+          @page {
+            size: A4 portrait;
+            margin: 0.5in;
+            padding: 0;
+          }
+        }
+      `}</style>
       <div className="page-content">
       <div className="page-header">
         <h1>Transaction Management</h1>
@@ -181,17 +468,19 @@ const TransactionManagement = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1000,
+          padding: '20px'
         }}>
           <div className="confirmation-popup" style={{
             backgroundColor: 'white',
             borderRadius: '12px',
             padding: '24px',
             maxWidth: '500px',
-            width: '90%',
+            width: '100%',
             maxHeight: '80vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            position: 'relative'
           }}>
             <div className="popup-header" style={{
               display: 'flex',
@@ -410,17 +699,19 @@ const TransactionManagement = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1500,
+          padding: '20px'
         }}>
           <div className="transaction-detail-popup" style={{
             backgroundColor: 'white',
             borderRadius: '12px',
             padding: '24px',
             maxWidth: '600px',
-            width: '90%',
+            width: '100%',
             maxHeight: '80vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            position: 'relative'
           }}>
             <div className="popup-header" style={{
               display: 'flex',
@@ -620,6 +911,254 @@ const TransactionManagement = () => {
             }}>
               <button
                 onClick={handleCloseTransactionDetail}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'white';
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Popup */}
+      {showReceipt && receiptData && (
+        <div className="receipt-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '20px'
+        }}>
+          <div className="receipt-popup" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '20px',
+            maxWidth: '900px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            position: 'relative'
+          }}>
+            <div className="receipt-header" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
+                Collection Receipt
+              </h3>
+              <button
+                onClick={handleCloseReceipt}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#f3f4f6';
+                  e.target.style.color = '#374151';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = '#6b7280';
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Receipt Content - Ultra Compact for 8.27" x 2" thermal receipt */}
+            <div 
+              id="receipt-content"
+              style={{
+                width: '794px', // 8.27 inches at 96 DPI
+                height: '192px', // 2 inches at 96 DPI
+                backgroundColor: 'white',
+                padding: '4px',
+                fontFamily: 'monospace',
+                fontSize: '7px',
+                lineHeight: '1.0',
+                border: '1px solid #e5e7eb',
+                margin: '0 auto',
+                textAlign: 'left',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Ultra Compact Header */}
+              <div style={{ textAlign: 'center', marginBottom: '3px', borderBottom: '1px solid #000', paddingBottom: '1px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '1px' }}>
+                  GOVERNMENT OFFICE
+                </div>
+                <div style={{ fontSize: '8px', marginBottom: '1px' }}>
+                  COLLECTION RECEIPT
+                </div>
+                <div style={{ fontSize: '7px', color: '#666' }}>
+                  {receiptData.date}
+                </div>
+              </div>
+
+              {/* Ultra Compact Main Content */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
+                {/* Left Section */}
+                <div style={{ flex: '1' }}>
+                  <div style={{ marginBottom: '3px' }}>
+                    <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '2px', color: '#333' }}>
+                      TRANSACTION
+                    </div>
+                    <div style={{ display: 'grid', gap: '1px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px' }}>
+                        <span>Receipt #:</span>
+                        <span style={{ fontWeight: 'bold' }}>#{receiptData.transactionId}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px' }}>
+                        <span>Type:</span>
+                        <span style={{ fontWeight: 'bold', color: '#16a34a' }}>{receiptData.type}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px' }}>
+                        <span>Amount:</span>
+                        <span style={{ fontWeight: 'bold', color: '#16a34a' }}>{formatCurrency(receiptData.amount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px' }}>
+                        <span>Payment:</span>
+                        <span>{receiptData.modeOfPayment}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle Section */}
+                <div style={{ flex: '1.5' }}>
+                  <div style={{ marginBottom: '3px' }}>
+                    <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '2px', color: '#333' }}>
+                      PAYER INFO
+                    </div>
+                    <div style={{ display: 'grid', gap: '1px' }}>
+                      <div style={{ fontSize: '7px' }}>
+                        <span style={{ fontWeight: 'bold' }}>Name:</span>
+                        <div style={{ marginLeft: '3px', marginTop: '0px' }}>{receiptData.recipient}</div>
+                      </div>
+                      <div style={{ fontSize: '7px' }}>
+                        <span style={{ fontWeight: 'bold' }}>Dept:</span>
+                        <div style={{ marginLeft: '3px', marginTop: '0px' }}>{receiptData.department}</div>
+                      </div>
+                      <div style={{ fontSize: '7px' }}>
+                        <span style={{ fontWeight: 'bold' }}>Category:</span>
+                        <div style={{ marginLeft: '3px', marginTop: '0px' }}>{receiptData.category}</div>
+                      </div>
+                      {receiptData.reference && (
+                        <div style={{ fontSize: '7px' }}>
+                          <span style={{ fontWeight: 'bold' }}>Ref:</span>
+                          <div style={{ marginLeft: '3px', marginTop: '0px' }}>{receiptData.reference}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Section */}
+                <div style={{ flex: '1' }}>
+                  <div style={{ marginBottom: '3px' }}>
+                    <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '2px', color: '#333' }}>
+                      PROCESSED BY
+                    </div>
+                    <div style={{ fontSize: '7px' }}>
+                      {receiptData.createdBy}
+                    </div>
+                    <div style={{ fontSize: '6px', color: '#666', marginTop: '1px' }}>
+                      {receiptData.date}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ultra Compact Description */}
+              <div style={{ marginBottom: '2px' }}>
+                <div style={{ fontSize: '7px', fontWeight: 'bold', marginBottom: '1px' }}>DESCRIPTION</div>
+                <div style={{ fontSize: '6px', lineHeight: '1.1', backgroundColor: '#f5f5f5', padding: '1px', borderRadius: '1px' }}>
+                  {receiptData.description}
+                </div>
+              </div>
+
+              {/* Ultra Compact Footer */}
+              <div style={{ 
+                textAlign: 'center', 
+                borderTop: '1px solid #000',
+                paddingTop: '1px',
+                fontSize: '6px'
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '0px' }}>
+                  Thank you for your payment!
+                </div>
+                <div style={{ color: '#666' }}>
+                  Keep this receipt for your records
+                </div>
+              </div>
+            </div>
+
+            {/* Receipt Actions */}
+            <div className="receipt-actions" style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center',
+              marginTop: '20px',
+              paddingTop: '16px',
+              borderTop: '1px solid #e5e7eb'
+            }}>
+              <button
+                onClick={handlePrintReceipt}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#2563eb';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#3b82f6';
+                }}
+              >
+                🖨️ Print Receipt
+              </button>
+              <button
+                onClick={handleCloseReceipt}
                 style={{
                   padding: '10px 20px',
                   border: '1px solid #d1d5db',

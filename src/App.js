@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import UserManagement from './components/UserManagement';
 import TransactionManagement from './components/TransactionManagement';
 import FundAccounts from './components/FundAccounts';
+import Override from './components/Override';
 import Reporting from './components/Reporting';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -21,6 +22,7 @@ function App() {
             <Route path="/user-management" element={<ProtectedRoute />} />
             <Route path="/transaction-management" element={<ProtectedRoute />} />
             <Route path="/fund-accounts" element={<ProtectedRoute />} />
+            <Route path="/override" element={<ProtectedRoute />} />
             <Route path="/reporting" element={<ProtectedRoute />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
           </Routes>
@@ -77,6 +79,8 @@ function ProtectedRoute() {
       return <TransactionManagement />;
     case '/fund-accounts':
       return <FundAccounts />;
+    case '/override':
+      return <Override />;
     case '/reporting':
       return <Reporting />;
     default:
