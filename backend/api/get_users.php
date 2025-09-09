@@ -7,6 +7,21 @@ require_once __DIR__ . '/../utils/jwt.php';
 $database = new Database();
 $db = $database->getConnection();
 
+// Verify JWT token
+$token = JWT::getTokenFromHeader();
+if (!$token) {
+    http_response_code(401);
+    echo json_encode(array("message" => "Access denied. No token provided."));
+    exit();
+}
+
+$decoded = JWT::decode($token);
+if (!$decoded) {
+    http_response_code(401);
+    echo json_encode(array("message" => "Access denied. Invalid token."));
+    exit();
+}
+
 try {
     // Get all users (excluding password for security)
     $query = "SELECT id, name, email, role, created_at, updated_at FROM users ORDER BY created_at DESC";

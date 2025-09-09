@@ -16,7 +16,7 @@ if (!empty($data->name) && !empty($data->code) && !empty($data->account_type)) {
     $name = trim($data->name);
     $code = trim($data->code);
     $description = isset($data->description) ? trim($data->description) : '';
-    $initial_balance = isset($data->initial_balance) ? floatval($data->initial_balance) : 0.00;
+    $initial_balance = isset($data->initial_balance) ? number_format((float)$data->initial_balance, 2, '.', '') : '0.00';
     $account_type = trim($data->account_type);
     $department = isset($data->department) ? trim($data->department) : '';
     
@@ -29,7 +29,7 @@ if (!empty($data->name) && !empty($data->code) && !empty($data->account_type)) {
     }
     
     // Validate initial balance
-    if ($initial_balance < 0) {
+    if ((float)$initial_balance < 0) {
         http_response_code(400);
         echo json_encode(array("message" => "Initial balance cannot be negative."));
         exit();

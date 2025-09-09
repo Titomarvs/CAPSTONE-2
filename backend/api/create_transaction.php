@@ -15,7 +15,7 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
     !empty($data->recipient) && !empty($data->department) && !empty($data->category)) {
     
     $type = trim($data->type);
-    $amount = floatval($data->amount);
+    $amount = number_format((float)$data->amount, 2, '.', '');
     $description = trim($data->description);
     $recipient = trim($data->recipient);
     $department = trim($data->department);
@@ -32,7 +32,7 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
     }
     
     // Validate amount
-    if ($amount <= 0) {
+    if ((float)$amount <= 0) {
         http_response_code(400);
         echo json_encode(array("message" => "Amount must be greater than 0."));
         exit();
@@ -100,7 +100,7 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
             
             // Update fund account balance if fund account is specified
             if ($fund_account_id) {
-                $balanceChange = ($type === 'Collection') ? $amount : -$amount;
+                $balanceChange = ($type === 'Collection') ? (float)$amount : -(float)$amount;
                 $updateBalanceQuery = "UPDATE fund_accounts SET current_balance = current_balance + :balance_change WHERE id = :fund_id";
                 $updateStmt = $db->prepare($updateBalanceQuery);
                 $updateStmt->bindParam(':balance_change', $balanceChange);

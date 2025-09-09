@@ -1,13 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Layout from './Layout';
+import axios from 'axios';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [currentTime] = useState(new Date().toLocaleString());
+  const [fundAccounts, setFundAccounts] = useState([]);
+  const [fundAccountsLoading, setFundAccountsLoading] = useState(true);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [selectedAccountType, setSelectedAccountType] = useState('All');
 
   const handleLogout = () => {
     logout();
+  };
+
+  // Fetch fund accounts on component mount
+  useEffect(() => {
+    fetchFundAccounts();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showFilterDropdown && !event.target.closest('.filter-container')) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
+  const fetchFundAccounts = async () => {
+    try {
+      setFundAccountsLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/get_fund_accounts.php', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      setFundAccounts(response.data.fund_accounts);
+    } catch (error) {
+      console.error('Error fetching fund accounts:', error);
+    } finally {
+      setFundAccountsLoading(false);
+    }
   };
 
   // Mock financial data - in a real system, this would come from your backend
@@ -21,64 +63,197 @@ const Dashboard = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PH', {
       style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      currency: 'PHP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
+  };
+
+  // Filter fund accounts based on selected account type
+  const filteredFundAccounts = selectedAccountType === 'All' 
+    ? fundAccounts 
+    : fundAccounts.filter(account => account.account_type === selectedAccountType);
+
+  // Account types for filter dropdown
+  const accountTypes = ['All', 'Asset', 'Liability', 'Equity', 'Revenue', 'Expense'];
+
+  const handleAccountTypeFilter = (accountType) => {
+    setSelectedAccountType(accountType);
+    setShowFilterDropdown(false);
   };
 
   return (
     <Layout>
+      <style jsx>{`
+        .financial-summary-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        
+        .filter-container {
+          position: relative;
+        }
+        
+        .filter-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background-color: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          z-index: 1000;
+          min-width: 150px;
+          margin-top: 4px;
+        }
+        
+        .filter-dropdown button:last-child {
+          border-bottom: none;
+        }
+      `}</style>
       <div className="dashboard-content">
         {/* Financial Summary */}
         <div className="financial-summary">
-          <h2>Financial Overview</h2>
-          <div className="summary-grid">
-            <div className="summary-item">
-              <div className="value">{formatCurrency(financialData.totalBudget)}</div>
-              <div className="label">Total Budget</div>
-            </div>
-            <div className="summary-item positive">
-              <div className="value">{formatCurrency(financialData.allocatedFunds)}</div>
-              <div className="label">Allocated Funds</div>
-            </div>
-            <div className="summary-item">
-              <div className="value">{formatCurrency(financialData.remainingBudget)}</div>
-              <div className="label">Remaining Budget</div>
-            </div>
-            <div className="summary-item">
-              <div className="value">{formatCurrency(financialData.monthlyExpenditure)}</div>
-              <div className="label">Monthly Expenditure</div>
+          <div className="financial-summary-header">
+            <h2>Financial Overview</h2>
+            <div className="filter-container">
+              <button 
+                className="filter-button"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+              >
+                <div style={{
+                  width: '16px',
+                  height: '2px',
+                  backgroundColor: '#6b7280',
+                  borderRadius: '1px'
+                }}></div>
+                <div style={{
+                  width: '16px',
+                  height: '2px',
+                  backgroundColor: '#6b7280',
+                  borderRadius: '1px'
+                }}></div>
+                <div style={{
+                  width: '16px',
+                  height: '2px',
+                  backgroundColor: '#6b7280',
+                  borderRadius: '1px'
+                }}></div>
+              </button>
+              
+              {showFilterDropdown && (
+                <div className="filter-dropdown" style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: '0',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  zIndex: 1000,
+                  minWidth: '150px',
+                  marginTop: '4px'
+                }}>
+                  {accountTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => handleAccountTypeFilter(type)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: selectedAccountType === type ? '#3b82f6' : 'transparent',
+                        color: selectedAccountType === type ? 'white' : '#374151',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: selectedAccountType === type ? '600' : '400',
+                        transition: 'all 0.2s',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedAccountType !== type) {
+                          e.target.style.backgroundColor = '#f9fafb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedAccountType !== type) {
+                          e.target.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+          {fundAccountsLoading ? (
+            <div className="loading-container" style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: '#6b7280'
+            }}>
+              <p>Loading fund accounts...</p>
+            </div>
+          ) : fundAccounts.length === 0 ? (
+            <div className="empty-state" style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: '#6b7280',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <h4>No fund accounts found</h4>
+              <p>Create your first fund account to get started.</p>
+            </div>
+          ) : (
+            <div className="summary-grid">
+              {filteredFundAccounts.slice(0, 4).map((account) => (
+                <div key={account.id} className="summary-item">
+                  <div className="value">{formatCurrency(account.current_balance)}</div>
+                  <div className="label">{account.name}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Dashboard Grid */}
         <div className="dashboard-grid">
-          <div className="dashboard-card">
-            <h3>
-              <span className="card-icon">📊</span>
-              Budget Management
-            </h3>
-            <p>Monitor and manage departmental budgets, allocations, and expenditures across all government agencies.</p>
-            <div className="card-value">{formatCurrency(financialData.remainingBudget)}</div>
-            <div className="card-subtitle">Available for allocation</div>
-            <div className="quick-actions">
-              <button className="quick-action-btn">View Budgets</button>
-              <button className="quick-action-btn secondary">Create Allocation</button>
-            </div>
-          </div>
+       
 
           <div className="dashboard-card">
             <h3>
               <span className="card-icon">✅</span>
-              Approvals
+              Override Requests
             </h3>
-            <p>Review and approve financial requests, purchase orders, and budget modifications.</p>
+            <p>Review and approve Override Requests</p>
             <div className="card-value">{financialData.pendingApprovals}</div>
-            <div className="card-subtitle">Pending approvals</div>
+            <div className="card-subtitle">Pending Override Requests</div>
             <div className="quick-actions">
               <button className="quick-action-btn">Review Requests</button>
               <button className="quick-action-btn secondary">Approval History</button>
@@ -113,78 +288,13 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="dashboard-card">
-            <h3>
-              <span className="card-icon">🔒</span>
-              Compliance
-            </h3>
-            <p>Ensure adherence to government financial regulations and audit requirements.</p>
-            <div className="card-value">98.5%</div>
-            <div className="card-subtitle">Compliance rate</div>
-            <div className="quick-actions">
-              <button className="quick-action-btn">View Compliance</button>
-              <button className="quick-action-btn secondary">Audit Trail</button>
-            </div>
-          </div>
+       
 
-          <div className="dashboard-card">
-            <h3>
-              <span className="card-icon">⚙️</span>
-              System Settings
-            </h3>
-            <p>Configure system parameters, user permissions, and administrative settings.</p>
-            <div className="card-value">Active</div>
-            <div className="card-subtitle">System status</div>
-            <div className="quick-actions">
-              <button className="quick-action-btn">Manage Users</button>
-              <button className="quick-action-btn secondary">System Config</button>
-            </div>
-          </div>
+        
         </div>
 
         {/* System Information */}
-        <div className="financial-summary">
-          <h2>System Information</h2>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-            gap: '20px',
-            marginTop: '20px'
-          }}>
-            <div style={{ 
-              padding: '16px', 
-              background: '#f8fafc', 
-              borderRadius: '6px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <strong>Last Login:</strong> {currentTime}
-            </div>
-            <div style={{ 
-              padding: '16px', 
-              background: '#f8fafc', 
-              borderRadius: '6px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <strong>User Role:</strong> Financial Administrator
-            </div>
-            <div style={{ 
-              padding: '16px', 
-              background: '#f8fafc', 
-              borderRadius: '6px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <strong>Department:</strong> Finance & Budget
-            </div>
-            <div style={{ 
-              padding: '16px', 
-              background: '#f8fafc', 
-              borderRadius: '6px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <strong>Security Level:</strong> High
-            </div>
-          </div>
-        </div>
+     
       </div>
     </Layout>
   );

@@ -23,7 +23,10 @@ if (!$decoded) {
 }
 
 try {
-    // Get all transactions with creator and fund account information
+    // Check if fund_account_id filter is provided
+    $fund_account_id = isset($_GET['fund_account_id']) ? intval($_GET['fund_account_id']) : null;
+    
+    // Get transactions with creator and fund account information
     $query = "SELECT 
                 t.id, 
                 t.type, 
@@ -42,10 +45,22 @@ try {
                 f.code as fund_account_code
               FROM transactions t 
               LEFT JOIN users u ON t.created_by = u.id 
-              LEFT JOIN fund_accounts f ON t.fund_account_id = f.id
-              ORDER BY t.created_at DESC";
+              LEFT JOIN fund_accounts f ON t.fund_account_id = f.id";
+    
+    // Add WHERE clause if fund_account_id is provided
+    if ($fund_account_id) {
+        $query .= " WHERE t.fund_account_id = :fund_account_id";
+    }
+    
+    $query .= " ORDER BY t.created_at DESC";
     
     $stmt = $db->prepare($query);
+    
+    // Bind parameter if fund_account_id is provided
+    if ($fund_account_id) {
+        $stmt->bindParam(':fund_account_id', $fund_account_id, PDO::PARAM_INT);
+    }
+    
     $stmt->execute();
     
     $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);

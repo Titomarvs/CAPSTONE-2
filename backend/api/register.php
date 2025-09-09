@@ -15,7 +15,7 @@ if (!empty($data->name) && !empty($data->email) && !empty($data->password)) {
     $name = trim($data->name);
     $email = trim($data->email);
     $password = $data->password;
-    $role = isset($data->role) ? $data->role : 'Collecting Officer';
+    $role = isset($data->role) ? $data->role : 'Admin';
     
     // Validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
