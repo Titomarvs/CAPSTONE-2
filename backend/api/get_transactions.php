@@ -37,6 +37,7 @@ try {
                 t.category, 
                 t.reference, 
                 t.fund_account_id,
+                t.mode_of_payment,
                 t.created_at, 
                 t.updated_at,
                 u.name as created_by_name,

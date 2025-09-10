@@ -12,7 +12,8 @@ $data = json_decode(file_get_contents("php://input"));
 
 // Validate required fields
 if (!empty($data->type) && !empty($data->amount) && !empty($data->description) && 
-    !empty($data->recipient) && !empty($data->department) && !empty($data->category)) {
+    !empty($data->recipient) && !empty($data->department) && !empty($data->category) && 
+    !empty($data->mode_of_payment)) {
     
     $type = trim($data->type);
     $amount = number_format((float)$data->amount, 2, '.', '');
@@ -22,12 +23,21 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
     $category = trim($data->category);
     $reference = isset($data->reference) ? trim($data->reference) : '';
     $fund_account_id = isset($data->fund_account_id) ? intval($data->fund_account_id) : null;
+    $mode_of_payment = trim($data->mode_of_payment);
     
     // Validate transaction type
     $validTypes = ['Disburse', 'Collection'];
     if (!in_array($type, $validTypes)) {
         http_response_code(400);
         echo json_encode(array("message" => "Invalid transaction type. Must be 'Disburse' or 'Collection'."));
+        exit();
+    }
+    
+    // Validate mode of payment
+    $validModes = ['Cash', 'Cheque', 'Bank Transfer'];
+    if (!in_array($mode_of_payment, $validModes)) {
+        http_response_code(400);
+        echo json_encode(array("message" => "Invalid mode of payment. Must be 'Cash', 'Cheque', or 'Bank Transfer'."));
         exit();
     }
     
@@ -81,8 +91,8 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
         }
         
         // Create the transaction
-        $query = "INSERT INTO transactions (type, amount, description, recipient, department, category, reference, fund_account_id, created_by) 
-                  VALUES (:type, :amount, :description, :recipient, :department, :category, :reference, :fund_account_id, :created_by)";
+        $query = "INSERT INTO transactions (type, amount, description, recipient, department, category, reference, fund_account_id, mode_of_payment, created_by) 
+                  VALUES (:type, :amount, :description, :recipient, :department, :category, :reference, :fund_account_id, :mode_of_payment, :created_by)";
         $stmt = $db->prepare($query);
         
         $stmt->bindParam(':type', $type);
@@ -93,6 +103,7 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
         $stmt->bindParam(':category', $category);
         $stmt->bindParam(':reference', $reference);
         $stmt->bindParam(':fund_account_id', $fund_account_id);
+        $stmt->bindParam(':mode_of_payment', $mode_of_payment);
         $stmt->bindParam(':created_by', $created_by);
         
         if ($stmt->execute()) {
@@ -121,6 +132,7 @@ if (!empty($data->type) && !empty($data->amount) && !empty($data->description) &
                     "category" => $category,
                     "reference" => $reference,
                     "fund_account_id" => $fund_account_id,
+                    "mode_of_payment" => $mode_of_payment,
                     "created_by" => $created_by
                 )
             ));

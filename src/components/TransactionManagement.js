@@ -28,6 +28,21 @@ const TransactionManagement = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideData, setOverrideData] = useState({
+    reason: '',
+    changes: {
+      amount: '',
+      description: '',
+      recipient: '',
+      department: '',
+      category: '',
+      reference: '',
+      fund_account_id: '',
+      mode_of_payment: ''
+    }
+  });
+  const [overrideLoading, setOverrideLoading] = useState(false);
 
   // Fetch transactions and fund accounts on component mount
   useEffect(() => {
@@ -162,6 +177,103 @@ const TransactionManagement = () => {
   const handleCloseReceipt = () => {
     setShowReceipt(false);
     setReceiptData(null);
+  };
+
+  const handleOverrideClick = () => {
+    if (selectedTransaction) {
+      // Initialize override form with current transaction data
+      setOverrideData({
+        reason: '',
+        changes: {
+          amount: selectedTransaction.amount,
+          description: selectedTransaction.description,
+          recipient: selectedTransaction.recipient,
+          department: selectedTransaction.department,
+          category: selectedTransaction.category,
+          reference: selectedTransaction.reference || '',
+          fund_account_id: selectedTransaction.fund_account_id || '',
+          mode_of_payment: selectedTransaction.mode_of_payment || ''
+        }
+      });
+      setShowOverrideForm(true);
+    }
+  };
+
+  const handleOverrideInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'reason') {
+      setOverrideData(prev => ({
+        ...prev,
+        reason: value
+      }));
+    } else {
+      setOverrideData(prev => ({
+        ...prev,
+        changes: {
+          ...prev.changes,
+          [name]: value
+        }
+      }));
+    }
+  };
+
+  const handleOverrideSubmit = async (e) => {
+    e.preventDefault();
+    setOverrideLoading(true);
+    setMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/api/create_override_request.php', {
+        transaction_id: selectedTransaction.id,
+        reason: overrideData.reason,
+        changes: overrideData.changes
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      setMessage('Override request submitted successfully!');
+      setMessageType('success');
+      setShowOverrideForm(false);
+      setOverrideData({
+        reason: '',
+        changes: {
+          amount: '',
+          description: '',
+          recipient: '',
+          department: '',
+          category: '',
+          reference: '',
+          fund_account_id: '',
+          mode_of_payment: ''
+        }
+      });
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Error submitting override request');
+      setMessageType('error');
+    } finally {
+      setOverrideLoading(false);
+    }
+  };
+
+  const handleCloseOverrideForm = () => {
+    setShowOverrideForm(false);
+    setOverrideData({
+      reason: '',
+      changes: {
+        amount: '',
+        description: '',
+        recipient: '',
+        department: '',
+        category: '',
+        reference: '',
+        fund_account_id: '',
+        mode_of_payment: ''
+      }
+    });
   };
 
   const handlePrintReceipt = () => {
@@ -910,6 +1022,28 @@ const TransactionManagement = () => {
               borderTop: '1px solid #e5e7eb'
             }}>
               <button
+                onClick={handleOverrideClick}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fde68a';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#fef3c7';
+                }}
+              >
+                🔧 Request Override
+              </button>
+              <button
                 onClick={handleCloseTransactionDetail}
                 style={{
                   padding: '10px 20px',
@@ -1180,6 +1314,399 @@ const TransactionManagement = () => {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Override Request Form Popup */}
+      {showOverrideForm && selectedTransaction && (
+        <div className="override-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2500,
+          padding: '20px'
+        }}>
+          <div className="override-popup" style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            position: 'relative'
+          }}>
+            <div className="popup-header" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '12px'
+                }}>
+                  <span style={{ color: 'white', fontSize: '20px' }}>🔧</span>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
+                    Request Transaction Override
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                    Transaction #{selectedTransaction.id} - {selectedTransaction.type}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseOverrideForm}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#f3f4f6';
+                  e.target.style.color = '#374151';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = '#6b7280';
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleOverrideSubmit}>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#374151' }}>
+                  Override Reason *
+                </h4>
+                <textarea
+                  name="reason"
+                  value={overrideData.reason}
+                  onChange={handleOverrideInputChange}
+                  required
+                  placeholder="Please provide a detailed reason for requesting this override..."
+                  rows="3"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    minHeight: '80px'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#374151' }}>
+                  Proposed Changes
+                </h4>
+                <div style={{
+                  backgroundColor: '#f9fafb',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                          Amount *
+                        </label>
+                        <input
+                          type="number"
+                          name="amount"
+                          value={overrideData.changes.amount}
+                          onChange={handleOverrideInputChange}
+                          required
+                          min="0"
+                          step="0.01"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                          Department *
+                        </label>
+                        <select
+                          name="department"
+                          value={overrideData.changes.department}
+                          onChange={handleOverrideInputChange}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        >
+                          <option value="">Select department</option>
+                          <option value="Finance & Budget">Finance & Budget</option>
+                          <option value="Public Works">Public Works</option>
+                          <option value="Education">Education</option>
+                          <option value="Health">Health</option>
+                          <option value="Revenue">Revenue</option>
+                          <option value="Administration">Administration</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Description *
+                      </label>
+                      <textarea
+                        name="description"
+                        value={overrideData.changes.description}
+                        onChange={handleOverrideInputChange}
+                        required
+                        rows="2"
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                          Recipient/Payer *
+                        </label>
+                        <input
+                          type="text"
+                          name="recipient"
+                          value={overrideData.changes.recipient}
+                          onChange={handleOverrideInputChange}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                          Category *
+                        </label>
+                        <select
+                          name="category"
+                          value={overrideData.changes.category}
+                          onChange={handleOverrideInputChange}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        >
+                          <option value="">Select category</option>
+                          <option value="Infrastructure">Infrastructure</option>
+                          <option value="Education">Education</option>
+                          <option value="Healthcare">Healthcare</option>
+                          <option value="Public Safety">Public Safety</option>
+                          <option value="Administrative">Administrative</option>
+                          <option value="Revenue">Revenue</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                          Reference Number
+                        </label>
+                        <input
+                          type="text"
+                          name="reference"
+                          value={overrideData.changes.reference}
+                          onChange={handleOverrideInputChange}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                          Mode of Payment *
+                        </label>
+                        <select
+                          name="mode_of_payment"
+                          value={overrideData.changes.mode_of_payment}
+                          onChange={handleOverrideInputChange}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        >
+                          <option value="">Select mode of payment</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Cheque">Cheque</option>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Fund Account
+                      </label>
+                      <select
+                        name="fund_account_id"
+                        value={overrideData.changes.fund_account_id}
+                        onChange={handleOverrideInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <option value="">Select fund account (optional)</option>
+                        {fundAccounts.map((account) => (
+                          <option key={account.id} value={account.id}>
+                            {account.name} ({account.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', color: '#92400e' }}>
+                  <span style={{ marginRight: '8px', fontSize: '16px' }}>⚠️</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                    This override request will be reviewed by an administrator before any changes are applied to the transaction.
+                  </span>
+                </div>
+              </div>
+
+              <div className="popup-actions" style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+                marginTop: '20px',
+                paddingTop: '16px',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <button
+                  type="button"
+                  onClick={handleCloseOverrideForm}
+                  disabled={overrideLoading}
+                  style={{
+                    padding: '10px 20px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: overrideLoading ? 'not-allowed' : 'pointer',
+                    opacity: overrideLoading ? 0.5 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!overrideLoading) {
+                      e.target.style.backgroundColor = '#f9fafb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!overrideLoading) {
+                      e.target.style.backgroundColor = 'white';
+                    }
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={overrideLoading}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    backgroundColor: overrideLoading ? '#9ca3af' : '#f59e0b',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: overrideLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!overrideLoading) {
+                      e.target.style.backgroundColor = '#d97706';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!overrideLoading) {
+                      e.target.style.backgroundColor = '#f59e0b';
+                    }
+                  }}
+                >
+                  {overrideLoading ? 'Submitting...' : 'Submit Override Request'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

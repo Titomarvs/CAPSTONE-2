@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Override Request Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h2>Override Request Test</h2>
+    
+    <div>
+        <h3>Step 1: Login to get token</h3>
+        <input type="email" id="email" placeholder="Email" value="m@gmail.com">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+    
+    <div>
+        <h3>Step 2: Test Override Request</h3>
+        <button onclick="testOverride()">Test Override Request</button>
+        <div id="overrideResult"></div>
+    </div>
+    
+    <div>
+        <h3>Step 3: Check Debug Info</h3>
+        <button onclick="checkDebug()">Check Debug Info</button>
+        <div id="debugResult"></div>
+    </div>
+
+    <script>
+        let token = '';
+        
+        async function login() {
+            try {
+                const response = await axios.post('/backend/api/login.php', {
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value
+                });
+                
+                token = response.data.token;
+                document.getElementById('loginResult').innerHTML = 
+                    '<p style="color: green;">Login successful! Token: ' + token.substring(0, 50) + '...</p>';
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = 
+                    '<p style="color: red;">Login failed: ' + error.response?.data?.message + '</p>';
+            }
+        }
+        
+        async function testOverride() {
+            if (!token) {
+                document.getElementById('overrideResult').innerHTML = 
+                    '<p style="color: red;">Please login first!</p>';
+                return;
+            }
+            
+            try {
+                const response = await axios.post('/backend/api/debug_override.php', {
+                    transaction_id: 11,
+                    reason: 'Test override request',
+                    changes: {
+                        amount: '150.00',
+                        description: 'Updated description',
+                        recipient: 'Test Recipient',
+                        department: 'Finance & Budget',
+                        category: 'Education',
+                        reference: 'TEST123',
+                        fund_account_id: '4',
+                        mode_of_payment: 'Cash'
+                    }
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                document.getElementById('overrideResult').innerHTML = 
+                    '<p style="color: green;">Override request successful!</p>' +
+                    '<pre>' + JSON.stringify(response.data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('overrideResult').innerHTML = 
+                    '<p style="color: red;">Override request failed:</p>' +
+                    '<pre>' + JSON.stringify(error.response?.data || error.message, null, 2) + '</pre>';
+            }
+        }
+        
+        async function checkDebug() {
+            try {
+                const response = await axios.get('/backend/debug_override.php');
+                document.getElementById('debugResult').innerHTML = 
+                    '<pre>' + JSON.stringify(response.data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('debugResult').innerHTML = 
+                    '<p style="color: red;">Debug check failed:</p>' +
+                    '<pre>' + JSON.stringify(error.response?.data || error.message, null, 2) + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

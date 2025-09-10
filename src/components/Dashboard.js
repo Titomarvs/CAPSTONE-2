@@ -10,14 +10,20 @@ const Dashboard = () => {
   const [fundAccountsLoading, setFundAccountsLoading] = useState(true);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedAccountType, setSelectedAccountType] = useState('All');
+  const [overrideRequests, setOverrideRequests] = useState([]);
+  const [overrideRequestsLoading, setOverrideRequestsLoading] = useState(true);
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
   const handleLogout = () => {
     logout();
   };
 
-  // Fetch fund accounts on component mount
+  // Fetch fund accounts, override requests, and transactions on component mount
   useEffect(() => {
     fetchFundAccounts();
+    fetchOverrideRequests();
+    fetchTransactions();
   }, []);
 
   // Close dropdown when clicking outside
@@ -52,13 +58,55 @@ const Dashboard = () => {
     }
   };
 
+  const fetchOverrideRequests = async () => {
+    try {
+      setOverrideRequestsLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/get_override_requests.php', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      setOverrideRequests(response.data.override_requests || []);
+    } catch (error) {
+      console.error('Error fetching override requests:', error);
+    } finally {
+      setOverrideRequestsLoading(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      setTransactionsLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/get_transactions.php', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      setTransactions(response.data.transactions || []);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  // Calculate pending override requests
+  const pendingOverrideRequests = overrideRequests.filter(request => request.status === 'pending').length;
+
+  // Calculate completed transactions (all transactions are considered completed once created)
+  const completedTransactions = transactions.length;
+
   // Mock financial data - in a real system, this would come from your backend
   const financialData = {
     totalBudget: 25000000,
     allocatedFunds: 18750000,
     remainingBudget: 6250000,
-    pendingApprovals: 12,
-    completedTransactions: 1247,
+    pendingApprovals: pendingOverrideRequests,
+    completedTransactions: completedTransactions,
     monthlyExpenditure: 3125000
   };
 
@@ -252,11 +300,29 @@ const Dashboard = () => {
               Override Requests
             </h3>
             <p>Review and approve Override Requests</p>
-            <div className="card-value">{financialData.pendingApprovals}</div>
+            <div className="card-value">
+              {overrideRequestsLoading ? (
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Loading...</span>
+              ) : (
+                financialData.pendingApprovals
+              )}
+            </div>
             <div className="card-subtitle">Pending Override Requests</div>
             <div className="quick-actions">
-              <button className="quick-action-btn">Review Requests</button>
-              <button className="quick-action-btn secondary">Approval History</button>
+              <button 
+                className="quick-action-btn"
+                onClick={() => window.location.href = '/override'}
+                disabled={overrideRequestsLoading}
+              >
+                Review Requests
+              </button>
+              <button 
+                className="quick-action-btn secondary"
+                onClick={() => window.location.href = '/override'}
+                disabled={overrideRequestsLoading}
+              >
+                Approval History
+              </button>
             </div>
           </div>
 
@@ -266,11 +332,29 @@ const Dashboard = () => {
               Transactions
             </h3>
             <p>Track all financial transactions, payments, and transfers within the government system.</p>
-            <div className="card-value">{financialData.completedTransactions}</div>
-            <div className="card-subtitle">Completed this quarter</div>
+            <div className="card-value">
+              {transactionsLoading ? (
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Loading...</span>
+              ) : (
+                financialData.completedTransactions
+              )}
+            </div>
+            <div className="card-subtitle">Total Transactions</div>
             <div className="quick-actions">
-              <button className="quick-action-btn">View Transactions</button>
-              <button className="quick-action-btn secondary">Generate Report</button>
+              <button 
+                className="quick-action-btn"
+                onClick={() => window.location.href = '/transaction-management'}
+                disabled={transactionsLoading}
+              >
+                View Transactions
+              </button>
+              <button 
+                className="quick-action-btn secondary"
+                onClick={() => window.location.href = '/reporting'}
+                disabled={transactionsLoading}
+              >
+                Generate Report
+              </button>
             </div>
           </div>
 
